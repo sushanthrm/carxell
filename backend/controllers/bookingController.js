@@ -79,6 +79,17 @@ const updateBookingStatus = async (req, res) => {
     }
     
     await booking.save();
+
+    // Log the event in the events collection
+    if (status === 'completed' || status === 'cancelled') {
+        await Event.create({
+            user_id: req.user.id,
+            action_type: status === 'completed' ? 'completed_test_drive' : 'cancelled_test_drive',
+            car_id: booking.car_id,
+            details: { booking_id: booking._id }
+        });
+    }
+
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: error.message });

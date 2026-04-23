@@ -33,11 +33,12 @@ const ProtectedRoute = ({ children, roles }) => {
 const AppRoutes = () => {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
-      <div className={`flex-grow ${!isHome ? 'pt-28 pb-12' : 'pb-8'}`}>
+      {!isAuthPage && <Navbar />}
+      <div className={`flex-grow flex flex-col ${isAuthPage ? '' : (!isHome ? 'pt-28 pb-12' : 'pb-8')}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

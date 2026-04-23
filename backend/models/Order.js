@@ -12,12 +12,11 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ customer_id: 1, payment_status: 1 });
 
 // Referential Integrity check (Simulating SQL Foreign Key constraints)
-orderSchema.pre('save', async function(next) {
+orderSchema.pre('save', async function() {
   const car = await Car.findById(this.car_id);
   if (!car) {
-    return next(new Error('Referential Integrity Error: Car does not exist in the database'));
+    throw new Error('Referential Integrity Error: Car does not exist in the database');
   }
-  next();
 });
 
 module.exports = mongoose.model('Order', orderSchema);

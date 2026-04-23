@@ -37,3 +37,34 @@ exports.getAccessoryById = async (req, res) => {
         res.status(500).json({ message: 'Error fetching accessory', error });
     }
 };
+
+// Update accessory (Admin)
+exports.updateAccessory = async (req, res) => {
+    try {
+        const accessory = await Accessory.findById(req.params.id);
+        if (accessory) {
+            Object.assign(accessory, req.body);
+            const updatedAccessory = await accessory.save();
+            res.json(updatedAccessory);
+        } else {
+            res.status(404).json({ message: 'Accessory not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating accessory', error });
+    }
+};
+
+// Delete accessory (Admin)
+exports.deleteAccessory = async (req, res) => {
+    try {
+        const accessory = await Accessory.findById(req.params.id);
+        if (accessory) {
+            await accessory.deleteOne();
+            res.json({ message: 'Accessory removed' });
+        } else {
+            res.status(404).json({ message: 'Accessory not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting accessory', error });
+    }
+};

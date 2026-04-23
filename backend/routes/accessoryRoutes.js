@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const accessoryController = require('../controllers/accessoryController');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
 
-router.get('/', accessoryController.getAccessories);
-router.get('/:id', accessoryController.getAccessoryById);
-router.post('/', accessoryController.createAccessory);
+router.route('/')
+  .get(accessoryController.getAccessories)
+  .post(protect, restrictTo('admin'), accessoryController.createAccessory);
+
+router.route('/:id')
+  .get(accessoryController.getAccessoryById)
+  .put(protect, restrictTo('admin'), accessoryController.updateAccessory)
+  .delete(protect, restrictTo('admin'), accessoryController.deleteAccessory);
 
 module.exports = router;

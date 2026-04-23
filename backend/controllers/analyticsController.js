@@ -48,19 +48,21 @@ const getAnalytics = async (req, res) => {
       { $sort: { views: -1 } }
     ]);
 
-    // 5. High-Intent User Detection (Users with multiple views + test drive booking)
-    const highIntentUsers = await Event.aggregate([
-      { 
-        $group: { 
-          _id: "$user_id", 
-          views: { $sum: { $cond: [{ $eq: ["$action_type", "viewed_car"] }, 1, 0] } },
-          test_drives: { $sum: { $cond: [{ $eq: ["$action_type", "booked_test_drive"] }, 1, 0] } }
+    // 5. Hot Deals (Customers with test drives but no purchases)
+    const hotDeals = await Event.aggregate([
+      {
+        $group: {
+          _id: "$user_id",
+          test_drives: { $sum: { $cond: [{ $eq: ["$action_type", "booked_test_drive"] }, 1, 0] } },
+          purchases: { $sum: { $cond: [{ $eq: ["$action_type", "purchased_car"] }, 1, 0] } }
         }
       },
-      { $match: { views: { $gte: 2 }, test_drives: { $gte: 1 } } },
+      { $match: { test_drives: { $gt: 0 }, purchases: { $eq: 0 } } },
+      { $sort: { test_drives: -1 } },
+      { $limit: 5 },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
       { $unwind: "$user" },
-      { $project: { _id: 1, views: 1, test_drives: 1, name: "$user.name", email: "$user.email" } }
+      { $project: { _id: 1, test_drives: 1, name: "$user.name", email: "$user.email", mobile_no: "$user.mobile_no" } }
     ]);
 
     res.json({
@@ -68,7 +70,7 @@ const getAnalytics = async (req, res) => {
       revenueOverTime: revenueOverTime.map(item => ({ date: `${item._id.month}/${item._id.year}`, revenue: item.revenue })),
       topCars,
       popularCategories,
-      highIntentUsers
+      hotDeals
     });
 
   } catch (error) {

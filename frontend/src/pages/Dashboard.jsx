@@ -53,83 +53,169 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-
-      <div className="glass-panel p-6 shadow-sm">
-         <h3 className="mb-6 font-bold text-slate-800 text-lg uppercase tracking-wide border-b border-slate-200 pb-4">High Intent Customers</h3>
-         {data.highIntentUsers?.length === 0 ? <p className="text-slate-500">No high intent customers mapped yet.</p> : (
-            <table className="w-full text-left">
-              <thead><tr className="text-slate-500 uppercase tracking-wider text-xs border-b border-slate-200"><th className="pb-3 font-semibold">Name</th><th className="pb-3 font-semibold">Email</th><th className="pb-3 font-semibold">Views</th><th className="pb-3 font-semibold">Test Drives</th></tr></thead>
-              <tbody>
-                {data.highIntentUsers?.map(user => (
-                  <tr key={user._id} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                    <td className="py-3 font-medium text-slate-700">{user.name}</td>
-                    <td className="py-3 text-slate-500">{user.email}</td>
-                    <td className="py-3 font-semibold text-slate-700">{user.views}</td>
-                    <td className="py-3 font-semibold text-primary">{user.test_drives}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-         )}
-      </div>
     </div>
   );
 };
 
 const SalesDashboard = () => {
   const [bookings, setBookings] = useState([]);
+  const [services, setServices] = useState([]);
+  const [hotDeals, setHotDeals] = useState([]);
+
   useEffect(() => {
     api.get('/bookings').then(res => setBookings(res.data)).catch(console.error);
+    api.get('/services').then(res => setServices(res.data)).catch(console.error);
+    api.get('/analytics').then(res => setHotDeals(res.data.hotDeals || [])).catch(console.error);
   }, []);
 
-  const updateStatus = async (id, status) => {
+  const updateBookingStatus = async (id, status) => {
     try {
       await api.put(`/bookings/${id}`, { status });
       setBookings(bookings.map(b => b._id === id ? { ...b, status } : b));
     } catch (e) {
-      alert('Failed to update');
+      alert('Failed to update booking status');
     }
   };
 
+  const updateServiceStatus = async (id, status) => {
+    try {
+      await api.put(`/services/${id}`, { status });
+      setServices(services.map(s => s._id === id ? { ...s, status } : s));
+    } catch (e) {
+      alert('Failed to update service status');
+    }
+  };
+
+  // Filter out completed and cancelled items from the Salesperson view
+  const activeBookings = bookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled');
+  const activeServices = services.filter(s => s.status !== 'completed' && s.status !== 'cancelled');
+
   return (
-    <div className="space-y-6">
-      <div className="glass-panel p-6 shadow-sm">
+    <>
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* Test Drives Column */}
+      <div className="glass-panel p-6 shadow-sm overflow-x-auto">
         <h3 className="mb-6 font-bold text-slate-800 text-lg uppercase tracking-wide border-b border-slate-200 pb-4">Manage Test Drives</h3>
-        <table className="w-full text-left">
+        <table className="w-full text-left min-w-[500px]">
           <thead>
-            <tr className="text-slate-500 uppercase tracking-wider text-xs border-b border-slate-200">
+            <tr className="text-slate-500 uppercase tracking-wider text-[10px] sm:text-xs border-b border-slate-200">
               <th className="pb-3 font-semibold">Car</th><th className="pb-3 font-semibold">Customer</th><th className="pb-3 font-semibold">Date/Time</th><th className="pb-3 font-semibold">Status</th><th className="pb-3 font-semibold">Action</th>
             </tr>
           </thead>
           <tbody>
-            {bookings.map(b => (
-              <tr key={b._id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+            {activeBookings.map(b => (
+              <tr key={b._id} className="border-b border-slate-100 hover:bg-slate-50 transition text-sm">
                 <td className="py-4 font-medium text-slate-700">{b.car_id?.brand} {b.car_id?.name}</td>
                 <td className="py-4 text-slate-600">{b.customer_id?.name}</td>
-                <td className="py-4 text-slate-600 font-medium">{b.date} <span className="text-slate-400">at</span> {b.time}</td>
+                <td className="py-4 text-slate-600 font-medium whitespace-nowrap">{b.date} <span className="text-slate-400">at</span> {b.time}</td>
                 <td className="py-4">
-                  <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${b.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : b.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : b.status === 'cancelled' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-700'}`}>
+                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${b.status === 'confirmed' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'}`}>
                     {b.status}
                   </span>
                 </td>
                 <td className="py-4">
                   {b.status === 'pending' && (
                     <div className="flex gap-2">
-                       <button onClick={() => updateStatus(b._id, 'confirmed')} className="text-xs font-bold bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition text-indigo-700 px-3 py-1.5 rounded uppercase">Confirm</button>
-                       <button onClick={() => updateStatus(b._id, 'cancelled')} className="text-xs font-bold bg-rose-50 border border-rose-200 hover:bg-rose-100 transition text-rose-700 px-3 py-1.5 rounded uppercase">Cancel</button>
+                       <button onClick={() => updateBookingStatus(b._id, 'confirmed')} className="text-[10px] font-bold bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition text-indigo-700 px-2 py-1 rounded uppercase">Confirm</button>
+                       <button onClick={() => updateBookingStatus(b._id, 'cancelled')} className="text-[10px] font-bold bg-rose-50 border border-rose-200 hover:bg-rose-100 transition text-rose-700 px-2 py-1 rounded uppercase">Cancel</button>
                     </div>
                   )}
                   {b.status === 'confirmed' && (
-                     <button onClick={() => updateStatus(b._id, 'completed')} className="text-xs font-bold bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition text-emerald-700 px-3 py-1.5 rounded uppercase">Complete</button>
+                     <button onClick={() => updateBookingStatus(b._id, 'completed')} className="text-[10px] font-bold bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition text-emerald-700 px-2 py-1 rounded uppercase">Complete</button>
                   )}
                 </td>
               </tr>
             ))}
-            {bookings.length === 0 && <tr><td colSpan="5" className="py-8 text-center text-slate-500 font-medium">No bookings available.</td></tr>}
+            {activeBookings.length === 0 && <tr><td colSpan="5" className="py-8 text-center text-slate-500 font-medium">No active bookings available.</td></tr>}
           </tbody>
         </table>
       </div>
+
+      {/* Services Column */}
+      <div className="glass-panel p-6 shadow-sm overflow-x-auto">
+        <h3 className="mb-6 font-bold text-slate-800 text-lg uppercase tracking-wide border-b border-slate-200 pb-4">Manage Services</h3>
+        <table className="w-full text-left min-w-[500px]">
+          <thead>
+            <tr className="text-slate-500 uppercase tracking-wider text-[10px] sm:text-xs border-b border-slate-200">
+              <th className="pb-3 font-semibold">Car/Service</th><th className="pb-3 font-semibold">Customer</th><th className="pb-3 font-semibold">Date</th><th className="pb-3 font-semibold">Status</th><th className="pb-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activeServices.map(s => (
+              <tr key={s._id} className="border-b border-slate-100 hover:bg-slate-50 transition text-sm">
+                <td className="py-4">
+                  <div className="font-medium text-slate-700">{s.car_model}</div>
+                  <div className="text-xs text-slate-500">{s.req_service} {s.pick_drop && <span className="ml-1 text-primary">(Pick & Drop)</span>}</div>
+                </td>
+                <td className="py-4 text-slate-600">
+                  <div>{s.customer_id?.name || 'Guest'}</div>
+                  <div className="text-xs text-slate-400">{s.mobile_no}</div>
+                </td>
+                <td className="py-4 text-slate-600 font-medium whitespace-nowrap">{s.date}</td>
+                <td className="py-4">
+                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${s.status === 'in-progress' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                    {s.status}
+                  </span>
+                </td>
+                <td className="py-4">
+                  {s.status === 'pending' && (
+                    <div className="flex flex-col gap-1">
+                       <button onClick={() => updateServiceStatus(s._id, 'in-progress')} className="text-[10px] font-bold bg-amber-50 border border-amber-200 hover:bg-amber-100 transition text-amber-700 px-2 py-1 rounded uppercase">Start</button>
+                       <button onClick={() => updateServiceStatus(s._id, 'cancelled')} className="text-[10px] font-bold bg-rose-50 border border-rose-200 hover:bg-rose-100 transition text-rose-700 px-2 py-1 rounded uppercase">Cancel</button>
+                    </div>
+                  )}
+                  {s.status === 'in-progress' && (
+                     <button onClick={() => updateServiceStatus(s._id, 'completed')} className="text-[10px] font-bold bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition text-emerald-700 px-2 py-1 rounded uppercase">Complete</button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {activeServices.length === 0 && <tr><td colSpan="5" className="py-8 text-center text-slate-500 font-medium">No active service requests.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
     </div>
+    
+    {/* Hot Deals Row */}
+    <div className="glass-panel p-6 shadow-sm mt-6 border-l-4 border-l-rose-500">
+      <div className="flex items-center gap-3 mb-6 border-b border-slate-200 pb-4">
+        <h3 className="font-black text-slate-800 text-xl uppercase tracking-wide">🔥 Hot Deals</h3>
+        <span className="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">High Conversion Probability</span>
+      </div>
+      
+      {hotDeals.length === 0 ? <p className="text-slate-500">No hot deals currently. All test drives converted or none booked.</p> : (
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-slate-500 uppercase tracking-wider text-xs border-b border-slate-200">
+              <th className="pb-3 font-semibold">Customer Name</th>
+              <th className="pb-3 font-semibold">Email</th>
+              <th className="pb-3 font-semibold text-center">Total Test Drives</th>
+              <th className="pb-3 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {hotDeals.map((deal, idx) => (
+              <tr key={deal._id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                <td className="py-4 font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">{idx + 1}</span>
+                  {deal.name}
+                </td>
+                <td className="py-4 text-slate-600">{deal.email}</td>
+                <td className="py-4 text-center">
+                  <span className="bg-rose-50 text-rose-600 font-black px-4 py-1.5 rounded-lg border border-rose-100">{deal.test_drives}</span>
+                </td>
+                <td className="py-4">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Has Not Purchased</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+
+    </>
   );
 }
 
@@ -184,6 +270,15 @@ const CustomerDashboard = () => {
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const [salesData, setSalesData] = useState(0);
+
+  useEffect(() => {
+    if (user.role === 'salesperson') {
+       api.get('/analytics').then(res => {
+          setSalesData(res.data.salesSummary?.totalRevenue || 0);
+       }).catch(console.error);
+    }
+  }, [user]);
 
   let bgImage = '';
   if (user.role === 'admin') {
@@ -206,9 +301,33 @@ const Dashboard = () => {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="mb-10 pl-4 border-l-4 border-l-primary bg-white/10 backdrop-blur-md py-3 pr-6 inline-block rounded-r-xl border border-white/10 shadow-lg">
-          <h1 className="text-3xl font-black text-white uppercase tracking-tight">Welcome, {user.name}</h1>
-          <p className="text-primary font-bold uppercase tracking-widest text-sm mt-1">{user.role} Dashboard</p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+          <div className="pl-4 border-l-4 border-l-primary bg-white/10 backdrop-blur-md py-3 pr-6 inline-block rounded-r-xl border border-white/10 shadow-lg w-max">
+            <h1 className="text-3xl font-black text-white uppercase tracking-tight">Welcome, {user.name}</h1>
+            <p className="text-primary font-bold uppercase tracking-widest text-sm mt-1">{user.role} Dashboard</p>
+          </div>
+
+          {user.role === 'salesperson' && (
+             <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl p-4 w-full md:w-96 shadow-lg">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-300 mb-2">
+                   <span>Current Sales</span>
+                   <span>Expected</span>
+                </div>
+                <div className="flex justify-between text-lg font-black text-white mb-2">
+                   <span>${salesData.toLocaleString()}</span>
+                   <span>$1,200,000</span>
+                </div>
+                <div className="w-full bg-slate-800/80 rounded-full h-3 overflow-hidden border border-slate-700">
+                   <div 
+                      className="bg-primary h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.min((salesData / 1200000) * 100, 100)}%` }}
+                   ></div>
+                </div>
+                <div className="text-right mt-2 text-[10px] text-primary font-bold uppercase tracking-wider">
+                   {((salesData / 1200000) * 100).toFixed(1)}% to goal
+                </div>
+             </div>
+          )}
         </div>
 
         {user.role === 'admin' && <AdminDashboard />}

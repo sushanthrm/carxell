@@ -10,6 +10,8 @@ const CarList = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const { user } = useContext(AuthContext);
   
@@ -28,11 +30,12 @@ const CarList = () => {
 
   const fetchCars = async () => {
     setLoading(true);
-    let url = `/cars?brand=${search}`;
+    let url = `/cars?brand=${search}&pageNumber=${page}`;
     if (category) url += `&category=${category}`;
     try {
       const res = await api.get(url);
       setCars(res.data.cars);
+      setTotalPages(res.data.pages);
     } catch (err) {
       console.error(err);
     } finally {
@@ -41,8 +44,12 @@ const CarList = () => {
   };
 
   useEffect(() => {
-    fetchCars();
+    setPage(1);
   }, [search, category]);
+
+  useEffect(() => {
+    fetchCars();
+  }, [search, category, page]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this car?')) {
@@ -163,6 +170,49 @@ const CarList = () => {
             </div>
           ))}
           {cars.length === 0 && <div className="col-span-full text-center py-20 text-slate-500 font-medium">No cars found matching your criteria.</div>}
+        </div>
+      )}
+
+      {/* Pagination UI */}
+      {totalPages > 1 && (
+        <div className="mt-12 flex justify-center items-center gap-2">
+          <button
+            onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            className={`p-2 rounded-lg border transition-all ${
+              page === 1 
+                ? 'border-slate-200 text-slate-300 cursor-not-allowed' 
+                : 'border-slate-300 text-slate-600 hover:border-teal-600 hover:text-teal-600'
+            }`}
+          >
+            <ChevronRight className="rotate-180" size={20} />
+          </button>
+          
+          {[...Array(totalPages)].map((_, idx) => (
+            <button
+              key={idx + 1}
+              onClick={() => setPage(idx + 1)}
+              className={`w-10 h-10 rounded-lg border font-bold transition-all ${
+                page === idx + 1
+                  ? 'bg-teal-600 border-teal-600 text-white shadow-md shadow-teal-600/20'
+                  : 'border-slate-300 text-slate-600 hover:border-teal-600 hover:text-teal-600'
+              }`}
+            >
+              {idx + 1}
+            </button>
+          ))}
+
+          <button
+            onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={page === totalPages}
+            className={`p-2 rounded-lg border transition-all ${
+              page === totalPages 
+                ? 'border-slate-200 text-slate-300 cursor-not-allowed' 
+                : 'border-slate-300 text-slate-600 hover:border-teal-600 hover:text-teal-600'
+            }`}
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
       )}
 

@@ -61,11 +61,15 @@ const SalesDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [services, setServices] = useState([]);
   const [hotDeals, setHotDeals] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
 
   useEffect(() => {
     api.get('/bookings').then(res => setBookings(res.data)).catch(console.error);
     api.get('/services').then(res => setServices(res.data)).catch(console.error);
-    api.get('/analytics').then(res => setHotDeals(res.data.hotDeals || [])).catch(console.error);
+    api.get('/analytics').then(res => {
+        setHotDeals(res.data.hotDeals || []);
+        setAnalyticsData(res.data);
+    }).catch(console.error);
   }, []);
 
   const updateBookingStatus = async (id, status) => {
@@ -92,6 +96,20 @@ const SalesDashboard = () => {
 
   return (
     <>
+    {analyticsData && analyticsData.revenueOverTime && (
+      <div className="glass-panel p-6 h-80 shadow-sm mb-6">
+        <h3 className="mb-6 font-bold text-slate-800 text-lg uppercase tracking-wide">Revenue Over Time</h3>
+        <ResponsiveContainer width="100%" height="80%">
+          <BarChart data={analyticsData.revenueOverTime}>
+            <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
+            <YAxis stroke="#64748b" fontSize={12} />
+            <Tooltip wrapperStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+            <Bar dataKey="revenue" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )}
+
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       {/* Test Drives Column */}
       <div className="glass-panel p-6 shadow-sm overflow-x-auto">
@@ -177,42 +195,66 @@ const SalesDashboard = () => {
 
     </div>
     
-    {/* Hot Deals Row */}
-    <div className="glass-panel p-6 shadow-sm mt-6 border-l-4 border-l-rose-500">
-      <div className="flex items-center gap-3 mb-6 border-b border-slate-200 pb-4">
-        <h3 className="font-black text-slate-800 text-xl uppercase tracking-wide">🔥 Hot Deals</h3>
-        <span className="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">High Conversion Probability</span>
-      </div>
+    {/* Bottom Row */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
       
-      {hotDeals.length === 0 ? <p className="text-slate-500">No hot deals currently. All test drives converted or none booked.</p> : (
-        <table className="w-full text-left">
-          <thead>
-            <tr className="text-slate-500 uppercase tracking-wider text-xs border-b border-slate-200">
-              <th className="pb-3 font-semibold">Customer Name</th>
-              <th className="pb-3 font-semibold">Email</th>
-              <th className="pb-3 font-semibold text-center">Total Test Drives</th>
-              <th className="pb-3 font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {hotDeals.map((deal, idx) => (
-              <tr key={deal._id} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                <td className="py-4 font-bold text-slate-800 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">{idx + 1}</span>
-                  {deal.name}
-                </td>
-                <td className="py-4 text-slate-600">{deal.email}</td>
-                <td className="py-4 text-center">
-                  <span className="bg-rose-50 text-rose-600 font-black px-4 py-1.5 rounded-lg border border-rose-100">{deal.test_drives}</span>
-                </td>
-                <td className="py-4">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Has Not Purchased</span>
-                </td>
+      {/* Hot Deals Row */}
+      <div className="glass-panel p-6 shadow-sm border-l-4 border-l-rose-500 lg:col-span-2">
+        <div className="flex items-center gap-3 mb-6 border-b border-slate-200 pb-4">
+          <h3 className="font-black text-slate-800 text-xl uppercase tracking-wide">🔥 Hot Deals</h3>
+          <span className="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">High Conversion Probability</span>
+        </div>
+        
+        {hotDeals.length === 0 ? <p className="text-slate-500">No hot deals currently. All test drives converted or none booked.</p> : (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-slate-500 uppercase tracking-wider text-xs border-b border-slate-200">
+                <th className="pb-3 font-semibold">Customer Name</th>
+                <th className="pb-3 font-semibold">Email</th>
+                <th className="pb-3 font-semibold text-center">Total Test Drives</th>
+                <th className="pb-3 font-semibold">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {hotDeals.map((deal, idx) => (
+                <tr key={deal._id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                  <td className="py-4 font-bold text-slate-800 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">{idx + 1}</span>
+                    {deal.name}
+                  </td>
+                  <td className="py-4 text-slate-600">{deal.email}</td>
+                  <td className="py-4 text-center">
+                    <span className="bg-rose-50 text-rose-600 font-black px-4 py-1.5 rounded-lg border border-rose-100">{deal.test_drives}</span>
+                  </td>
+                  <td className="py-4">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Has Not Purchased</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Trending Categories */}
+      {analyticsData && (
+      <div className="glass-panel p-6 shadow-sm border-l-4 border-l-primary/60 lg:col-span-1">
+        <h3 className="mb-6 font-bold text-slate-800 text-lg uppercase tracking-wide border-b border-slate-200 pb-4">Trending Categories</h3>
+        <div className="space-y-4">
+          {(!analyticsData.popularCategories || analyticsData.popularCategories.length === 0) ? (
+             <p className="text-slate-500">No customer view data yet.</p>
+          ) : (
+            analyticsData.popularCategories.map((cat, idx) => (
+              <div key={idx} className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div className="font-semibold text-slate-700">{cat._id} Models</div>
+                <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold">{cat.views} Views</div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
       )}
+
     </div>
 
     </>
@@ -275,7 +317,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (user.role === 'salesperson') {
        api.get('/analytics').then(res => {
-          setSalesData(res.data.salesSummary?.totalRevenue || 0);
+          setSalesData(res.data.salesSummary?.ytdRevenue || 0);
        }).catch(console.error);
     }
   }, [user]);
@@ -310,7 +352,7 @@ const Dashboard = () => {
           {user.role === 'salesperson' && (
              <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl p-4 w-full md:w-96 shadow-lg">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-300 mb-2">
-                   <span>Current Sales</span>
+                   <span>Current Sales YTD</span>
                    <span>Expected</span>
                 </div>
                 <div className="flex justify-between text-lg font-black text-white mb-2">

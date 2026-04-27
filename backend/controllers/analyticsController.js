@@ -13,6 +13,13 @@ const getAnalytics = async (req, res) => {
       { $group: { _id: null, totalSales: { $sum: 1 }, totalRevenue: { $sum: '$price' } } }
     ]);
 
+    // 1b. Year-To-Date (YTD) Revenue
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+    const ytdStats = await Order.aggregate([
+      { $match: { payment_status: 'paid', createdAt: { $gte: startOfYear } } },
+      { $group: { _id: null, ytdRevenue: { $sum: '$price' } } }
+    ]);
+
     // 2. Revenue Over Time (Gruoped by Month for simplicity - Assuming timestamps)
     const revenueOverTime = await Order.aggregate([
       { $match: { payment_status: 'paid' } },
@@ -48,16 +55,27 @@ const getAnalytics = async (req, res) => {
       { $sort: { views: -1 } }
     ]);
 
-    // 5. Hot Deals (Customers with test drives but no purchases)
+    // 5. Hot Deals (Customers with test drives AFTER their most recent purchase)
     const hotDeals = await Event.aggregate([
       {
         $group: {
           _id: "$user_id",
           test_drives: { $sum: { $cond: [{ $eq: ["$action_type", "booked_test_drive"] }, 1, 0] } },
-          purchases: { $sum: { $cond: [{ $eq: ["$action_type", "purchased_car"] }, 1, 0] } }
+          last_test_drive: { $max: { $cond: [{ $eq: ["$action_type", "booked_test_drive"] }, "$createdAt", null] } },
+          last_purchase: { $max: { $cond: [{ $eq: ["$action_type", "purchased_car"] }, "$createdAt", null] } }
         }
       },
-      { $match: { test_drives: { $gt: 0 }, purchases: { $eq: 0 } } },
+      { 
+        $match: { 
+          test_drives: { $gt: 0 }, 
+          $expr: {
+            $or: [
+              { $eq: ["$last_purchase", null] },
+              { $gt: ["$last_test_drive", "$last_purchase"] }
+            ]
+          }
+        } 
+      },
       { $sort: { test_drives: -1 } },
       { $limit: 5 },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
@@ -66,7 +84,11 @@ const getAnalytics = async (req, res) => {
     ]);
 
     res.json({
-      salesSummary: salesStats.length > 0 ? salesStats[0] : { totalSales: 0, totalRevenue: 0 },
+      salesSummary: {
+        totalSales: salesStats.length > 0 ? salesStats[0].totalSales : 0,
+        totalRevenue: salesStats.length > 0 ? salesStats[0].totalRevenue : 0,
+        ytdRevenue: ytdStats.length > 0 ? ytdStats[0].ytdRevenue : 0
+      },
       revenueOverTime: revenueOverTime.map(item => ({ date: `${item._id.month}/${item._id.year}`, revenue: item.revenue })),
       topCars,
       popularCategories,

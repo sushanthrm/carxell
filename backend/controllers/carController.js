@@ -5,7 +5,7 @@ const Car = require('../models/Car');
 // @access  Public
 const getCars = async (req, res) => {
   try {
-    const pageSize = 10;
+    const pageSize = Number(req.query.pageSize) || 12;
     const page = Number(req.query.pageNumber) || 1;
     
     // Build filter
@@ -23,7 +23,7 @@ const getCars = async (req, res) => {
       .limit(pageSize)
       .skip(pageSize * (page - 1));
 
-    res.json({ cars, page, pages: Math.ceil(count / pageSize) });
+    res.json({ cars, page, pages: Math.ceil(count / pageSize), total: count });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
